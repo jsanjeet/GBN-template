@@ -1,0 +1,33 @@
+
+Error Control Protocols
+Design
+	This program simulates a network capable of sending information in one direction (from A to B). There are protocols in place to ensure that the data transferred arrives to the receiver in the correct order, and that the data has not been altered by bit errors over the course of transmission.
+	The way this program functions is fairly simple. Messages are sent from the application layer (layer 5) on the A side. They are then transmitted using a Go-Back-N protocol to the receiver (B). Go-Back-N allows A to send N packets of information to B at a time (meaning up to N packets can be in the network at once). Finally, packets are sent to the B-side application layer in order. Let us examine the protocols that make this possible:
+ 
+- In Order Arrival: To ensure in order arrival, the receiver only accepts packets with the sequence number it is expecting. If B receives a packet it has already seen (duplicate packet suggests that the ACK previously sent for this packet was lost) is it ignored. Likewise, if a packet arrives out of order, it is ignored as well.
+Sequence numbers are set up so that no 2 packets with identical sequence numbers can be in the network at once. This way we can utilize cumulative ACKs. That is, an ACK for sequence number N tells A that packet N and every packet before N have been received successfully.
+ 
+- Secure delivery (bit error detection): To find bit errors in packets, which often occurs in networks, we use a checksum. This is an number which holds the sum of each number in the header (sequence number, ACK number) and each letter in the payload. Upon arrival of a packet (to both A and B sides) the checksum is checked. If the packet has experienced a bit error, the checksum will not match the sum of the header and payload data. If the checksum is correct, then the packet is not corrupt. Any packet found to be corrupt is ignored.
+ 
+- Packet loss: To determine packet loss in the network, we use a timer on the A side. Once a packet is sent to B, the timer is started. If an ACK for that packet is not received within the specified timeout interval, it is assumed that the packet was lost on its way to B. If the packet was lost, B will reject all other arriving packets. Therefore, when a timeout event occurs, the entire window is resent.
+	There are a few things that could be done to improve the performance of this program. One option is that we can store any out of order packets that arrive at B. We can do this by storing any out of order packets that we have not seen already (we would still ignore duplicate packets). Instead of cumulative ACKs, we would send ACKs for packets we received, and NACKs for any packet we are missing. A would then only retransmit packets that it received a NACK for.
+	Another thing that could be done is to use a retransmit interval that changes during the simulation. Each time a new ACK is received, we can calculate RTT. If we calculate average RTT each time a new ACK comes in, incorporating this new value each time, we could estimate RTT pretty well. We could then set the interval to a multiple of this estimated RTT, instead of having one static value.
+ 
+ 
+ 
+Testing
+	Steps needed to run this program are very straightforward. After compiling all of the source code files, run Project.java. This file contains the main function for the program, and is responsible for creating the network simulator. Once the program begins, follow the prompts on the screen, and enter the correct values. The values you must enter are:
+	1) Number of messages to simulate: This is the number of messages that will be sent 		   down from Layer 5 (on sending side). Note that the simulation terminates after the 	   last message is sent from layer 5. This means that it is likely for some messages 		   to be sent down from A, but not yet received by B when the simulation ends.
+  
+	2) Packet loss probability: Average percent of packets to be lost in the network
+	3) Packet corruption probability: Average percent of packets (that have not been lost 	   to be lost in the network) to arrive corrupted. This simulates bit errors that 	   	   often occur over a link.
+	4) Average time between messages from sender's layer 5: The smaller the number, the 	  	   faster packets will arrive, and the faster the sending window/queue will fill up.
+	5) Window size: How many packets may be in the network before receiving an ACK.
+	6) Retransmission timeout: How long a timer will run before expiring. If an ACK has 	  	   not been received when the timer expires, the entire window will be resent to B
+	7) Trace level: For debugging purposes. 0 will display no messages regarding network 		   events (except the print statements I included in the program), while 3 will 	  	   display significantly detailed information.
+	8) Seed number: Used for random number generators.
+ 
+	To ensure that my protocols were working correctly, I ran the simulation several times, on different seed numbers. Each test run sent a high volume of messages (1000 messages to be exact), used a window size of 1, and a timeout interval of 20. The protocols work correctly since, even with significant probability of loss and corruption (0.2 for each), packets were delivered in order. All test runs have shown that all packets arrive in order, which suggests that all protocols are functioning correctly.
+ 
+ 
+
